@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: ai-portfolio-analyser
+  ai:
+    openai:
+      chat:
+        base-url: https://generativelanguage.googleapis.com/v1beta/openai/
+        options:
+          model: gemini-3-flash-preview
+      api-key: ${GEMINI_API_KEY}
