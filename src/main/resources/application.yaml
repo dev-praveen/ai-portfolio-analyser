@@ -1,6 +1,9 @@
 spring:
   application:
     name: ai-portfolio-analyser
+  threads:
+    virtual:
+      enabled: true
   ai:
     openai:
       chat:
@@ -8,3 +11,7 @@ spring:
         options:
           model: gemini-3-flash-preview
       api-key: ${GEMINI_API_KEY}
+  springdoc:
+    swagger-ui:
+      enabled: true
+      path: /swagger-ui.html
