@@ -48,9 +48,9 @@ public class Model {
   record TimeHorizonImpact(
       @JsonProperty("short_term") String shortTerm, @JsonProperty("long_term") String longTerm) {}
 
-  record SymbolAndPrice(String symbol, String avgBuyPrice) {}
+  public record SymbolAndPrice(String symbol, String avgBuyPrice) {}
 
-  public record SymbolAndPriceList(List<SymbolAndPrice> symbolAndPriceList) {}
+  public record SymbolAndPriceList(List<SymbolAndPrice> symbolAndAveragePriceList) {}
 
   public record PortfolioAnalysisRequest(
       Exchange exchange,

@@ -16,10 +16,10 @@ public class PortfolioAnalysisController {
 
   private final PortfolioService portfolioService;
 
-  @GetMapping(path = "/analyze", produces = "application/json")
+  @PostMapping(path = "/analyze", produces = "application/json")
   public ResponseEntity<List<Model.StockNewsAnalysis>> analyzePortfolio(
       @RequestParam Model.Exchange exchange,
-      @RequestParam Model.SymbolAndPriceList symbolAndAveragePriceList,
+      @RequestBody Model.SymbolAndPriceList symbolAndAveragePriceList,
       @RequestParam Model.Horizon horizon,
       @RequestParam Model.RiskProfile riskProfile) {
 
