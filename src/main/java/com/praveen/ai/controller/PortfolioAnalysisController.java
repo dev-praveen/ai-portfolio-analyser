@@ -17,7 +17,7 @@ public class PortfolioAnalysisController {
   private final PortfolioService portfolioService;
 
   @PostMapping(path = "/analyze", produces = "application/json")
-  public ResponseEntity<List<Model.StockNewsAnalysis>> analyzePortfolio(
+  public ResponseEntity<List<Model.PortfolioAnalysisResponse>> analyzePortfolio(
       @RequestParam Model.Exchange exchange,
       @RequestBody Model.SymbolAndPriceList symbolAndAveragePriceList,
       @RequestParam Model.Horizon horizon,
@@ -35,7 +35,7 @@ public class PortfolioAnalysisController {
         new Model.PortfolioAnalysisRequest(
             exchange, symbolAndAveragePriceList, horizon, riskProfile);
 
-    final List<Model.StockNewsAnalysis> portFolioAnalysis =
+    final List<Model.PortfolioAnalysisResponse> portFolioAnalysis =
         portfolioService.getPortFolioAnalysis(portfolioAnalysisRequest);
 
     log.info(

@@ -41,14 +41,25 @@ public class PortfolioService {
                      - Separate facts from opinion.
                      - No generic investment advice.
                      - End user is a layman, so explain jargon in simple terms.
-
+                     Response Mapping rules:
+                        Restrict yourself to the following mapping rules for each stock:
+                        news_type: [earnings|regulatory|management|macro|sector|competition|one_time|structural]
+                        sentiment: [bullish|neutral|bearish]
+                        market_reaction: [up|down|flat|unknown]
+                        revenue: [positive|neutral|negative]
+                        margins: [positive|neutral|negative]
+                        balance_sheet: [positive|neutral|negative]
+                        long_term_moat: [improving|stable|weakening]
+                        risk_level: [low|medium|high]
+                        thesis_changed: [true|false]
+                        recommended_action: [exit|partial_exit|hold|accumulate|buy]
                      {format}
                      """;
 
-  public List<Model.StockNewsAnalysis> getPortFolioAnalysis(
+  public List<Model.PortfolioAnalysisResponse> getPortFolioAnalysis(
       Model.PortfolioAnalysisRequest portfolioAnalysisRequest) {
 
-    final BeanOutputConverter<List<Model.StockNewsAnalysis>> beanOutputConverter =
+    final BeanOutputConverter<List<Model.PortfolioAnalysisResponse>> beanOutputConverter =
         new BeanOutputConverter<>(new ParameterizedTypeReference<>() {});
 
     final String format = beanOutputConverter.getFormat();
@@ -75,13 +86,10 @@ public class PortfolioService {
             .create();
 
     final Generation generation = chatModel.call(prompt).getResult();
-    if (generation == null) {
-      log.error("Generation result is null for the given prompt: {}", prompt);
-      return Collections.emptyList();
-    }
-    final AssistantMessage assistantMessage = generation.getOutput();
-    if (assistantMessage.getText() == null) {
-      log.error("AssistantMessage output is null for the given prompt: {}", prompt);
+    final AssistantMessage assistantMessage = generation == null ? null : generation.getOutput();
+
+    if (assistantMessage == null || assistantMessage.getText() == null) {
+      log.error("Generation or assistant output is null for the given prompt");
       return Collections.emptyList();
     }
 

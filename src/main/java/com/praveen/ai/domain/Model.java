@@ -24,7 +24,7 @@ public class Model {
     NASDAQ
   }
 
-  public record StockNewsAnalysis(
+  public record PortfolioAnalysisResponse(
       @JsonProperty("stock") String stock,
       @JsonProperty("news_summary") String newsSummary,
       @JsonProperty("news_type") List<String> newsType,
