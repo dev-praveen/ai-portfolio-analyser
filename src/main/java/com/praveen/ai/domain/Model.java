@@ -39,13 +39,13 @@ public class Model {
       @JsonProperty("action_reason") String actionReason,
       @JsonProperty("invalidation_triggers") String invalidationTriggers) {}
 
-  record FundamentalImpact(
+  public record FundamentalImpact(
       @JsonProperty("revenue") String revenue,
       @JsonProperty("margins") String margins,
       @JsonProperty("balance_sheet") String balanceSheet,
       @JsonProperty("long_term_moat") String longTermMoat) {}
 
-  record TimeHorizonImpact(
+  public record TimeHorizonImpact(
       @JsonProperty("short_term") String shortTerm, @JsonProperty("long_term") String longTerm) {}
 
   public record SymbolAndPrice(String symbol, String avgBuyPrice) {}
