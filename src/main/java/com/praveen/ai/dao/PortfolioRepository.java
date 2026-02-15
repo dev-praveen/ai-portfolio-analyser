@@ -28,6 +28,9 @@ public class PortfolioRepository {
       Model.PortfolioAnalysisResponse portfolioAnalysisResponse) {
 
     try {
+      log.info(
+          "Converting PortfolioAnalysisResponse to JSON string for stock: {}",
+          portfolioAnalysisResponse.stock());
       ObjectMapper objectMapper = new ObjectMapper();
       return objectMapper.writeValueAsString(portfolioAnalysisResponse);
     } catch (JsonProcessingException e) {
@@ -45,6 +48,7 @@ public class PortfolioRepository {
     final String response = convertToJsonString(portfolioAnalysisResponse);
 
     try {
+      log.info("Saving PortfolioAnalysis in database for {}", stockName);
       dsl.insertInto(PORTFOLIO_ANALYSIS_TABLE)
           .set(PORTFOLIO_ANALYSIS_TABLE.ID, UUID.randomUUID())
           .set(PORTFOLIO_ANALYSIS_TABLE.STOCK_NAME, stockName)
@@ -62,6 +66,7 @@ public class PortfolioRepository {
           .set(PORTFOLIO_ANALYSIS_TABLE.LAST_UPDATED_AT, OffsetDateTime.now())
           .set(PORTFOLIO_ANALYSIS_TABLE.ANALYSIS_DATA, JSONB.valueOf(response))
           .execute();
+      log.info("PortfolioAnalysis saved in database for {}", stockName);
     } catch (Exception e) {
       log.error("Error saving portfolio analysis to database: {}", e.getMessage());
     }
@@ -73,25 +78,30 @@ public class PortfolioRepository {
 
     try {
 
+      log.info("Fetching PortfolioAnalysis in database for {}", stockName);
       var stockRecord =
           dsl.select(PORTFOLIO_ANALYSIS_TABLE.ANALYSIS_DATA)
               .from(PORTFOLIO_ANALYSIS_TABLE)
               .where(PORTFOLIO_ANALYSIS_TABLE.STOCK_NAME.eq(stockName))
-              .and(PORTFOLIO_ANALYSIS_TABLE.LAST_UPDATED_AT.lessOrEqual(threshold))
+              .and(PORTFOLIO_ANALYSIS_TABLE.LAST_UPDATED_AT.greaterOrEqual(threshold))
               .fetchOne();
 
       if (stockRecord == null) {
+        log.info("No PortfolioAnalysis found in database for {}", stockName);
         return Optional.empty();
       }
 
       JSONB analysisData = stockRecord.get(PORTFOLIO_ANALYSIS_TABLE.ANALYSIS_DATA);
       if (analysisData == null || analysisData.data().isEmpty()) {
+        log.info("No PortfolioAnalysisData found in database for {}", stockName);
         return Optional.empty();
       }
 
       ObjectMapper mapper = new ObjectMapper();
       Model.PortfolioAnalysisResponse response =
           mapper.readValue(analysisData.data(), Model.PortfolioAnalysisResponse.class);
+
+      log.info("PortfolioAnalysis fetched from database for {}", stockName);
 
       return Optional.of(response);
     } catch (Exception e) {

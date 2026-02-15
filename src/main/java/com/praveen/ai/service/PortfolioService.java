@@ -32,7 +32,7 @@ public class PortfolioService {
       """
                      You are a professional equity research analyst.
 
-                     Stocks: {stocksAndAvgPrice}
+                     StocksAndAverageBuyPrice: {stocksAndAvgPrice}
                      Exchange: {exchange}
                      Horizon: {horizon}
                      RiskProfile: {riskProfile}
@@ -63,7 +63,7 @@ public class PortfolioService {
                      {format}
                      """;
 
-  private static @NonNull String constructStockName(
+  private String constructStockName(
       Model.PortfolioAnalysisRequest portfolioAnalysisRequest,
       Model.PortfolioAnalysisResponse portfolioAnalysisResponse) {
 
@@ -86,64 +86,77 @@ public class PortfolioService {
     final Model.PortfolioAnalysisRequest newPortfolioAnalysisRequest =
         portfolioAnalysisRequestWithDBResponses.portfolioAnalysisRequest();
 
-    if (!newPortfolioAnalysisRequest.symbolAndPriceList().symbolAndAveragePriceList().isEmpty()) {
+    final List<Model.PortfolioAnalysisResponse> responsesFromDB =
+        portfolioAnalysisRequestWithDBResponses.responsesFromDB();
 
-      final BeanOutputConverter<List<Model.PortfolioAnalysisResponse>> beanOutputConverter =
-          new BeanOutputConverter<>(new ParameterizedTypeReference<>() {});
-
-      final String format = beanOutputConverter.getFormat();
-
-      final String stocksAndAveragePrice =
-          newPortfolioAnalysisRequest.symbolAndPriceList().symbolAndAveragePriceList().toString();
-
-      final Prompt prompt =
-          PromptTemplate.builder()
-              .template(template)
-              .variables(
-                  Map.of(
-                      "stocksAndAvgPrice",
-                      stocksAndAveragePrice,
-                      "exchange",
-                      newPortfolioAnalysisRequest.exchange(),
-                      "horizon",
-                      newPortfolioAnalysisRequest.horizon(),
-                      "riskProfile",
-                      newPortfolioAnalysisRequest.riskProfile(),
-                      "format",
-                      format))
-              .build()
-              .create();
-
-      final Generation generation = chatModel.call(prompt).getResult();
-      final AssistantMessage assistantMessage = generation == null ? null : generation.getOutput();
-
-      if (assistantMessage == null || assistantMessage.getText() == null) {
-        log.error("Generation or assistant output is null for the given prompt");
-        return Collections.emptyList();
-      }
-
-      final List<Model.PortfolioAnalysisResponse> portfolioAnalysisResponseList =
-          beanOutputConverter.convert(assistantMessage.getText());
-
-      try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-        portfolioAnalysisResponseList.forEach(
-            portfolioAnalysisResponse -> {
-              final String stockName =
-                  constructStockName(newPortfolioAnalysisRequest, portfolioAnalysisResponse);
-              log.info(
-                  "Saving portfolio analysis for stock: {}", portfolioAnalysisResponse.stock());
-              executorService.submit(
-                  () ->
-                      portfolioRepository.savePortfolioAnalysis(
-                          stockName, newPortfolioAnalysisRequest, portfolioAnalysisResponse));
-            });
-      }
-      final List<Model.PortfolioAnalysisResponse> portfolioAnalysisResponses =
-          portfolioAnalysisRequestWithDBResponses.responsesFromDB();
-      portfolioAnalysisResponseList.addAll(portfolioAnalysisResponses);
-      return portfolioAnalysisResponseList;
+    if (newPortfolioAnalysisRequest.symbolAndPriceList().symbolAndAveragePriceList().isEmpty()) {
+      log.info(
+          "All requested stocks have found recent analysis in database. Returning responses from database");
+      return responsesFromDB;
     }
-    return portfolioAnalysisRequestWithDBResponses.responsesFromDB();
+
+    final List<Model.PortfolioAnalysisResponse> portfolioAnalysisResponseList =
+        makeLLMCall(newPortfolioAnalysisRequest);
+
+    try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+      portfolioAnalysisResponseList.forEach(
+          portfolioAnalysisResponse -> {
+            final String stockName =
+                constructStockName(newPortfolioAnalysisRequest, portfolioAnalysisResponse);
+            log.info("Saving portfolio analysis for stock: {}", portfolioAnalysisResponse.stock());
+            executorService.submit(
+                () ->
+                    portfolioRepository.savePortfolioAnalysis(
+                        stockName, newPortfolioAnalysisRequest, portfolioAnalysisResponse));
+          });
+    }
+    return Stream.concat(responsesFromDB.stream(), portfolioAnalysisResponseList.stream()).toList();
+  }
+
+  private List<Model.PortfolioAnalysisResponse> makeLLMCall(
+      Model.PortfolioAnalysisRequest newPortfolioAnalysisRequest) {
+
+    log.info(
+        "Making LLM call for stocks: {}",
+        newPortfolioAnalysisRequest.symbolAndPriceList().symbolAndAveragePriceList().stream()
+            .map(Model.SymbolAndPrice::symbol)
+            .collect(Collectors.joining(", ")));
+
+    final BeanOutputConverter<List<Model.PortfolioAnalysisResponse>> beanOutputConverter =
+        new BeanOutputConverter<>(new ParameterizedTypeReference<>() {});
+
+    final String format = beanOutputConverter.getFormat();
+
+    final String stocksAndAveragePrice =
+        newPortfolioAnalysisRequest.symbolAndPriceList().symbolAndAveragePriceList().toString();
+
+    final Prompt prompt =
+        PromptTemplate.builder()
+            .template(template)
+            .variables(
+                Map.of(
+                    "stocksAndAvgPrice",
+                    stocksAndAveragePrice,
+                    "exchange",
+                    newPortfolioAnalysisRequest.exchange(),
+                    "horizon",
+                    newPortfolioAnalysisRequest.horizon(),
+                    "riskProfile",
+                    newPortfolioAnalysisRequest.riskProfile(),
+                    "format",
+                    format))
+            .build()
+            .create();
+
+    final Generation generation = chatModel.call(prompt).getResult();
+    final AssistantMessage assistantMessage = generation == null ? null : generation.getOutput();
+
+    if (assistantMessage == null || assistantMessage.getText() == null) {
+      log.error("Generation or assistant output is null for the given prompt");
+      return Collections.emptyList();
+    }
+
+    return beanOutputConverter.convert(assistantMessage.getText());
   }
 
   private PortfolioAnalysisRequestWithDBResponses getNewPortfolioAnalysisRequest(
@@ -176,10 +189,10 @@ public class PortfolioService {
           var recentAnalysis = portfolioRepository.fetchRecentByStockName(stockName, threshold);
 
           if (recentAnalysis.isPresent()) {
-            log.info("Found recent analysis for stock: {}", stockName);
+            log.info("Found recent analysis in database for stock: {}", stockName);
             responsesFromDB.put(stockName, recentAnalysis.get());
           } else {
-            log.info("No recent analysis found for stock: {}", stockName);
+            log.info("No recent analysis found in database for stock: {}", stockName);
             responsesFromDB.put(stockName, null);
           }
         });
@@ -210,13 +223,14 @@ public class PortfolioService {
             .filter(symbolAndPrice -> !stockSymbolsInDB.contains(symbolAndPrice.symbol()))
             .toList();
 
-    new Model.PortfolioAnalysisRequest(
-        portfolioAnalysisRequest.exchange(),
-        new Model.SymbolAndPriceList(newSymbolAndPriceList),
-        portfolioAnalysisRequest.horizon(),
-        portfolioAnalysisRequest.riskProfile());
+    final Model.PortfolioAnalysisRequest newPortfolioAnalysisRequest =
+        new Model.PortfolioAnalysisRequest(
+            portfolioAnalysisRequest.exchange(),
+            new Model.SymbolAndPriceList(newSymbolAndPriceList),
+            portfolioAnalysisRequest.horizon(),
+            portfolioAnalysisRequest.riskProfile());
 
-    return new PortfolioAnalysisRequestWithDBResponses(portfolioAnalysisRequest, responses);
+    return new PortfolioAnalysisRequestWithDBResponses(newPortfolioAnalysisRequest, responses);
   }
 
   record PortfolioAnalysisRequestWithDBResponses(
