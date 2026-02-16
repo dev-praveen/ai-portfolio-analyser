@@ -1,10 +1,9 @@
 package com.praveen.ai.service;
 
-import com.praveen.ai.dao.PortfolioRepository;
+import com.praveen.ai.dao.PortfolioAnalysisRepository;
 import com.praveen.ai.domain.Model;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.Generation;
@@ -26,11 +25,11 @@ import java.util.stream.Stream;
 public class PortfolioService {
 
   private final ChatModel chatModel;
-  private final PortfolioRepository portfolioRepository;
+  private final PortfolioAnalysisRepository portfolioAnalysisRepository;
 
   String template =
       """
-                     You are a professional equity research analyst.
+                     You are a professional equity research analyst. Based on below 4 inputs, assess the stocks.
 
                      StocksAndAverageBuyPrice: {stocksAndAvgPrice}
                      Exchange: {exchange}
@@ -63,31 +62,17 @@ public class PortfolioService {
                      {format}
                      """;
 
-  private String constructStockName(
-      Model.PortfolioAnalysisRequest portfolioAnalysisRequest,
-      Model.PortfolioAnalysisResponse portfolioAnalysisResponse) {
-
-    return portfolioAnalysisResponse
-        .stock()
-        .concat("#")
-        .concat(portfolioAnalysisRequest.exchange().toString())
-        .concat("#")
-        .concat(portfolioAnalysisRequest.horizon().toString())
-        .concat("#")
-        .concat(portfolioAnalysisRequest.riskProfile().toString());
-  }
-
   public List<Model.PortfolioAnalysisResponse> getPortFolioAnalysis(
       Model.PortfolioAnalysisRequest portfolioAnalysisRequest) {
 
-    final PortfolioAnalysisRequestWithDBResponses portfolioAnalysisRequestWithDBResponses =
-        getNewPortfolioAnalysisRequest(portfolioAnalysisRequest);
+    final PortfolioAnalysisDBResponse portfolioAnalysisDBResponse =
+        getPortfolioAnalysisFromDatabase(portfolioAnalysisRequest);
 
     final Model.PortfolioAnalysisRequest newPortfolioAnalysisRequest =
-        portfolioAnalysisRequestWithDBResponses.portfolioAnalysisRequest();
+        portfolioAnalysisDBResponse.portfolioAnalysisRequest();
 
     final List<Model.PortfolioAnalysisResponse> responsesFromDB =
-        portfolioAnalysisRequestWithDBResponses.responsesFromDB();
+        portfolioAnalysisDBResponse.responsesFromDB();
 
     if (newPortfolioAnalysisRequest.symbolAndPriceList().symbolAndAveragePriceList().isEmpty()) {
       log.info(
@@ -95,22 +80,23 @@ public class PortfolioService {
       return responsesFromDB;
     }
 
-    final List<Model.PortfolioAnalysisResponse> portfolioAnalysisResponseList =
+    final List<Model.PortfolioAnalysisResponse> llmPortfolioAnalysisResponseList =
         makeLLMCall(newPortfolioAnalysisRequest);
 
     try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-      portfolioAnalysisResponseList.forEach(
-          portfolioAnalysisResponse -> {
-            final String stockName =
-                constructStockName(newPortfolioAnalysisRequest, portfolioAnalysisResponse);
-            log.info("Saving portfolio analysis for stock: {}", portfolioAnalysisResponse.stock());
+
+      llmPortfolioAnalysisResponseList.forEach(
+          llmPortfolioAnalysisResponse -> {
+            log.info(
+                "Saving portfolio analysis for stock: {}", llmPortfolioAnalysisResponse.stock());
             executorService.submit(
                 () ->
-                    portfolioRepository.savePortfolioAnalysis(
-                        stockName, newPortfolioAnalysisRequest, portfolioAnalysisResponse));
+                    portfolioAnalysisRepository.savePortfolioAnalysis(
+                        newPortfolioAnalysisRequest, llmPortfolioAnalysisResponse));
           });
     }
-    return Stream.concat(responsesFromDB.stream(), portfolioAnalysisResponseList.stream()).toList();
+    return Stream.concat(responsesFromDB.stream(), llmPortfolioAnalysisResponseList.stream())
+        .toList();
   }
 
   private List<Model.PortfolioAnalysisResponse> makeLLMCall(
@@ -159,7 +145,7 @@ public class PortfolioService {
     return beanOutputConverter.convert(assistantMessage.getText());
   }
 
-  private PortfolioAnalysisRequestWithDBResponses getNewPortfolioAnalysisRequest(
+  private PortfolioAnalysisDBResponse getPortfolioAnalysisFromDatabase(
       Model.PortfolioAnalysisRequest portfolioAnalysisRequest) {
 
     OffsetDateTime threshold = OffsetDateTime.now().minusHours(1);
@@ -182,11 +168,12 @@ public class PortfolioService {
                         .concat(portfolioAnalysisRequest.riskProfile().toString()))
             .toList();
 
-    Map<String, Model.PortfolioAnalysisResponse> responsesFromDB = new HashMap<>();
+    final Map<String, Model.PortfolioAnalysisResponse> responsesFromDB = new HashMap<>();
 
     stockNames.forEach(
         stockName -> {
-          var recentAnalysis = portfolioRepository.fetchRecentByStockName(stockName, threshold);
+          var recentAnalysis =
+              portfolioAnalysisRepository.fetchRecentByStockName(stockName, threshold);
 
           if (recentAnalysis.isPresent()) {
             log.info("Found recent analysis in database for stock: {}", stockName);
@@ -230,10 +217,10 @@ public class PortfolioService {
             portfolioAnalysisRequest.horizon(),
             portfolioAnalysisRequest.riskProfile());
 
-    return new PortfolioAnalysisRequestWithDBResponses(newPortfolioAnalysisRequest, responses);
+    return new PortfolioAnalysisDBResponse(newPortfolioAnalysisRequest, responses);
   }
 
-  record PortfolioAnalysisRequestWithDBResponses(
+  record PortfolioAnalysisDBResponse(
       Model.PortfolioAnalysisRequest portfolioAnalysisRequest,
       List<Model.PortfolioAnalysisResponse> responsesFromDB) {}
 }

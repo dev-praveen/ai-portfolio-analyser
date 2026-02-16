@@ -10,6 +10,7 @@ import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,7 +18,7 @@ import java.util.UUID;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class PortfolioRepository {
+public class PortfolioAnalysisRepository {
 
   private static final PortfolioAnalysis PORTFOLIO_ANALYSIS_TABLE =
       PortfolioAnalysis.PORTFOLIO_ANALYSIS;
@@ -41,11 +42,15 @@ public class PortfolioRepository {
 
   @Transactional
   public void savePortfolioAnalysis(
-      String stockName,
       Model.PortfolioAnalysisRequest portfolioAnalysisRequest,
       Model.PortfolioAnalysisResponse portfolioAnalysisResponse) {
 
     final String response = convertToJsonString(portfolioAnalysisResponse);
+    final String stockName =
+        constructStockName(portfolioAnalysisRequest, portfolioAnalysisResponse);
+
+    final BigDecimal avgBuyPrice =
+        getAvgBuyPrice(portfolioAnalysisRequest, portfolioAnalysisResponse.stock());
 
     try {
       log.info("Saving PortfolioAnalysis in database for {}", stockName);
@@ -58,6 +63,7 @@ public class PortfolioRepository {
           .set(PORTFOLIO_ANALYSIS_TABLE.ANALYSIS_DATA, JSONB.valueOf(response))
           .set(PORTFOLIO_ANALYSIS_TABLE.EXCHANGE, portfolioAnalysisRequest.exchange().toString())
           .set(PORTFOLIO_ANALYSIS_TABLE.HORIZON, portfolioAnalysisRequest.horizon().toString())
+          .set(PORTFOLIO_ANALYSIS_TABLE.AVERAGE_BUY_PRICE, avgBuyPrice)
           .set(
               PORTFOLIO_ANALYSIS_TABLE.RISK_PROFILE,
               portfolioAnalysisRequest.riskProfile().toString())
@@ -65,6 +71,7 @@ public class PortfolioRepository {
           .doUpdate()
           .set(PORTFOLIO_ANALYSIS_TABLE.LAST_UPDATED_AT, OffsetDateTime.now())
           .set(PORTFOLIO_ANALYSIS_TABLE.ANALYSIS_DATA, JSONB.valueOf(response))
+          .set(PORTFOLIO_ANALYSIS_TABLE.AVERAGE_BUY_PRICE, avgBuyPrice)
           .execute();
       log.info("PortfolioAnalysis saved in database for {}", stockName);
     } catch (Exception e) {
@@ -108,5 +115,29 @@ public class PortfolioRepository {
       log.error("Error fetching recent portfolio analysis for {}: {}", stockName, e.getMessage());
       return Optional.empty();
     }
+  }
+
+  private String constructStockName(
+      Model.PortfolioAnalysisRequest portfolioAnalysisRequest,
+      Model.PortfolioAnalysisResponse portfolioAnalysisResponse) {
+
+    return portfolioAnalysisResponse
+        .stock()
+        .concat("#")
+        .concat(portfolioAnalysisRequest.exchange().toString())
+        .concat("#")
+        .concat(portfolioAnalysisRequest.horizon().toString())
+        .concat("#")
+        .concat(portfolioAnalysisRequest.riskProfile().toString());
+  }
+
+  private BigDecimal getAvgBuyPrice(Model.PortfolioAnalysisRequest request, String targetSymbol) {
+
+    return request.symbolAndPriceList().symbolAndAveragePriceList().stream()
+        .filter(symbolAndPrice -> symbolAndPrice.symbol().equals(targetSymbol))
+        .map(Model.SymbolAndPrice::avgBuyPrice)
+        .map(BigDecimal::new)
+        .findFirst()
+        .orElse(BigDecimal.ZERO);
   }
 }

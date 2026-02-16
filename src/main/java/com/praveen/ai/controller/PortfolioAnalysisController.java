@@ -29,6 +29,7 @@ public class PortfolioAnalysisController {
         symbolAndAveragePriceList,
         horizon,
         riskProfile);
+
     log.info("Please wait while we analyze your portfolio based on the latest news and events...");
 
     final var portfolioAnalysisRequest =
