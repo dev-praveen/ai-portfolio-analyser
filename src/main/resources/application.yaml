@@ -10,7 +10,14 @@ spring:
         base-url: https://generativelanguage.googleapis.com/v1beta/openai/
         options:
           model: gemini-3-flash-preview
-      api-key: ${GEMINI_API_KEY}
+      api-key: ${OPEN_AI_API_KEY}
+  datasource:
+    url: ${POSTGRES_CLOUD_URL}
+    username: ${POSTGRES_CLOUD_USER}
+    password: ${POSTGRES_CLOUD_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jooq:
+    sql-dialect: POSTGRES
   springdoc:
     swagger-ui:
       enabled: true
