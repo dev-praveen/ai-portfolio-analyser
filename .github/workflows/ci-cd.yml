@@ -38,5 +38,17 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
       - name: Docker build and push image to DockerHub
         run: mvn jib:build
+
+      - name: Install and configure the Koyeb CLI
+        uses: koyeb-community/koyeb-actions@v2
+        with:
+          api_token: "${{ secrets.KOYEB_API_TOKEN }}"
+
+      - name: Build and deploy the application to Koyeb
+        uses: koyeb/action-git-deploy@v1
+        with:
+          app-name: ai-portfolio-analyser
+          service-name: ai-portfolio-analyser-service
