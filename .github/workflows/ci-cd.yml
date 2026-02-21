@@ -1,0 +1,37 @@
+name: ci-cd workflow
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: 25
+          distribution: 'zulu'
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      - name: Build and analyze
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          POSTGRES_CLOUD_URL: ${{ secrets.POSTGRES_CLOUD_URL }}
+          POSTGRES_CLOUD_USER: ${{ secrets.POSTGRES_CLOUD_USER }}
+          POSTGRES_CLOUD_PASSWORD: ${{ secrets.POSTGRES_CLOUD_PASSWORD }}
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=dev-praveen_ai-portfolio-analyser mvn clean package -DPOSTGRES_CLOUD_URL=POSTGRES_CLOUD_URL -DPOSTGRES_CLOUD_USER=POSTGRES_CLOUD_USER -DPOSTGRES_CLOUD_PASSWORD=POSTGRES_CLOUD_PASSWORD

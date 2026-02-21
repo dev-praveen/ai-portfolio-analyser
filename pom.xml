@@ -15,6 +15,7 @@
     <properties>
         <java.version>25</java.version>
         <spring-ai.version>2.0.0-M2</spring-ai.version>
+        <sonar.organization>sonar-cloud-scanner</sonar.organization>
     </properties>
     <dependencies>
         <dependency>
@@ -101,6 +102,48 @@
                         </exclude>
                     </excludes>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.5.1</version>
+                <configuration>
+                    <from>
+                        <image>
+                            eclipse-temurin:25-jre@sha256:96bccca442e8842a7366df338f5960e3342862ea6b8d42b97009a3dfd8602547
+                        </image>
+                    </from>
+                    <container>
+                        <mainClass>com.praveen.ai.AiPortfolioAnalyserApplication</mainClass>
+                    </container>
+                    <to>
+                        <image>docker.io/dockerpraveen123/portfolio-ai</image>
+                    </to>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.14</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>5.5.0.6356</version>
             </plugin>
             <plugin>
                 <groupId>org.jooq</groupId>
