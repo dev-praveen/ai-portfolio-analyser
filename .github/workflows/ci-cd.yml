@@ -31,7 +31,8 @@ jobs:
       - name: Build and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          POSTGRES_CLOUD_URL: ${{ secrets.POSTGRES_CLOUD_URL }}
-          POSTGRES_CLOUD_USER: ${{ secrets.POSTGRES_CLOUD_USER }}
-          POSTGRES_CLOUD_PASSWORD: ${{ secrets.POSTGRES_CLOUD_PASSWORD }}
-        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=dev-praveen_ai-portfolio-analyser mvn clean package -DPOSTGRES_CLOUD_URL=POSTGRES_CLOUD_URL -DPOSTGRES_CLOUD_USER=POSTGRES_CLOUD_USER -DPOSTGRES_CLOUD_PASSWORD=POSTGRES_CLOUD_PASSWORD
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          -Dsonar.projectKey=dev-praveen_ai-portfolio-analyser \
+          -DPOSTGRES_CLOUD_URL=${{ secrets.POSTGRES_CLOUD_URL }} \
+          -DPOSTGRES_CLOUD_USER=${{ secrets.POSTGRES_CLOUD_USER }} \
+          -DPOSTGRES_CLOUD_PASSWORD=${{ secrets.POSTGRES_CLOUD_PASSWORD }}
