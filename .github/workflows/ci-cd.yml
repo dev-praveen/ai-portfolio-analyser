@@ -53,4 +53,6 @@ jobs:
           app-name: ai-portfolio-analyser
           service-name: ai-portfolio-analyser-service
           docker: "docker.io/dockerpraveen123/portfolio-ai:latest"
-          service-env: "POSTGRES_CLOUD_URL=${{ secrets.POSTGRES_CLOUD_URL }},POSTGRES_CLOUD_USER=${{ secrets.POSTGRES_CLOUD_USER }},POSTGRES_CLOUD_PASSWORD=${{ secrets.POSTGRES_CLOUD_PASSWORD }}"
+          service-ports: "8080:http"
+          service-routes: "/:8080"
+          service-env: "PORT=8080,POSTGRES_CLOUD_URL=${{ secrets.POSTGRES_CLOUD_URL }},POSTGRES_CLOUD_USER=${{ secrets.POSTGRES_CLOUD_USER }},POSTGRES_CLOUD_PASSWORD=${{ secrets.POSTGRES_CLOUD_PASSWORD }}"
