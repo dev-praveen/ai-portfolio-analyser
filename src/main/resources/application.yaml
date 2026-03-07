@@ -7,9 +7,9 @@ spring:
   ai:
     openai:
       chat:
-        base-url: https://generativelanguage.googleapis.com/v1beta/openai/
+        base-url: ${AI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai/}
         options:
-          model: gemini-3-flash-preview
+          model: ${AI_MODEL:gemini-3-flash-preview}
       api-key: ${OPEN_AI_API_KEY}
   datasource:
     url: ${POSTGRES_CLOUD_URL}
