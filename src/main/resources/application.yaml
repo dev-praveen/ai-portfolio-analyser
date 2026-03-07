@@ -22,3 +22,6 @@ spring:
     swagger-ui:
       enabled: true
       path: /swagger-ui.html
+
+server:
+  forward-headers-strategy: framework
