@@ -148,7 +148,7 @@ public class PortfolioService {
   private PortfolioAnalysisDBResponse getPortfolioAnalysisFromDatabase(
       Model.PortfolioAnalysisRequest portfolioAnalysisRequest) {
 
-    OffsetDateTime threshold = OffsetDateTime.now().minusHours(1);
+    OffsetDateTime threshold = OffsetDateTime.now().minusHours(4);
 
     final List<String> stockSymbols =
         portfolioAnalysisRequest.symbolAndPriceList().symbolAndAveragePriceList().stream()

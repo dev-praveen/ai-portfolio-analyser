@@ -56,5 +56,5 @@ jobs:
           service-ports: "8080:http"
           service-routes: "/:8080"
           service-instance-type: 'small'
-          service-region: 'sin'
+          service-regions: 'sin'
           service-env: "POSTGRES_CLOUD_URL=${{ secrets.POSTGRES_CLOUD_URL }},POSTGRES_CLOUD_USER=${{ secrets.POSTGRES_CLOUD_USER }},POSTGRES_CLOUD_PASSWORD=${{ secrets.POSTGRES_CLOUD_PASSWORD }}"
