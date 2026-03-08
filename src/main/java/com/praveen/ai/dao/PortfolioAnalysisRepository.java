@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.praveen.ai.db.tables.PortfolioAnalysis;
 import com.praveen.ai.domain.Model;
+import com.praveen.ai.error.DatabaseException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jooq.DSLContext;
@@ -76,6 +77,7 @@ public class PortfolioAnalysisRepository {
       log.info("PortfolioAnalysis saved in database for {}", stockName);
     } catch (Exception e) {
       log.error("Error saving portfolio analysis to database: {}", e.getMessage());
+      throw new DatabaseException("Error saving portfolio analysis to database");
     }
   }
 
@@ -113,7 +115,7 @@ public class PortfolioAnalysisRepository {
       return Optional.of(response);
     } catch (Exception e) {
       log.error("Error fetching recent portfolio analysis for {}: {}", stockName, e.getMessage());
-      return Optional.empty();
+      throw new DatabaseException("Error fetching recent portfolio analysis from database");
     }
   }
 

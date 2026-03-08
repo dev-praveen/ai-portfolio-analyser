@@ -2,6 +2,7 @@ package com.praveen.ai.service;
 
 import com.praveen.ai.dao.PortfolioAnalysisRepository;
 import com.praveen.ai.domain.Model;
+import com.praveen.ai.error.LLMException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -134,15 +135,20 @@ public class PortfolioService {
             .build()
             .create();
 
-    final Generation generation = chatModel.call(prompt).getResult();
-    final AssistantMessage assistantMessage = generation == null ? null : generation.getOutput();
+    try {
+      final Generation generation = chatModel.call(prompt).getResult();
+      final AssistantMessage assistantMessage = generation == null ? null : generation.getOutput();
 
-    if (assistantMessage == null || assistantMessage.getText() == null) {
-      log.error("Generation or assistant output is null for the given prompt");
-      return Collections.emptyList();
+      if (assistantMessage == null || assistantMessage.getText() == null) {
+        log.error("Generation or assistant output is null for the given prompt");
+        return Collections.emptyList();
+      }
+
+      return beanOutputConverter.convert(assistantMessage.getText());
+    } catch (Exception e) {
+      log.error("Error during LLM call: {}", e.getMessage());
+      throw new LLMException("Exception occurred while making LLM call for portfolio analysis");
     }
-
-    return beanOutputConverter.convert(assistantMessage.getText());
   }
 
   private PortfolioAnalysisDBResponse getPortfolioAnalysisFromDatabase(

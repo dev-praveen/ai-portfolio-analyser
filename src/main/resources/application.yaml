@@ -12,6 +12,12 @@ spring:
           model: ${AI_MODEL:gemini-3-flash-preview}
       api-key: ${OPEN_AI_API_KEY}
   datasource:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 3
+      idle-timeout: 300000
+      connection-timeout: 10000
+      max-lifetime: 600000
     url: ${POSTGRES_CLOUD_URL}
     username: ${POSTGRES_CLOUD_USER}
     password: ${POSTGRES_CLOUD_PASSWORD}
