@@ -50,6 +50,7 @@ public class PortfolioService {
 
                      Response Mapping rules:
                         Restrict yourself to the following mapping rules for each stock:
+                        For a given stock, if multiple news types are available, include all of them within that stock’s single news summary. Do not create multiple list items for the same stock.
                         news_type: [earnings|regulatory|management|macro|sector|competition|one_time|structural]
                         sentiment: [bullish|neutral|bearish]
                         market_reaction: [up|down|flat|unknown]
@@ -60,6 +61,8 @@ public class PortfolioService {
                         risk_level: [low|medium|high]
                         thesis_changed: [true|false]
                         recommended_action: [exit|partial_exit|hold|accumulate|buy]
+                        If the user provides one stock, the response should return a list with a single item for that stock.
+                        If the user provides two stocks, the response should return a list containing two items, one for each stock.
                      {format}
                      """;
 

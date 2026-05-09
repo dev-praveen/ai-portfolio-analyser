@@ -63,4 +63,4 @@ jobs:
           service-routes: "/:8080"
           service-instance-type: 'small'
           service-regions: 'sin'
-          service-env: "POSTGRES_CLOUD_URL=${{ secrets.POSTGRES_CLOUD_URL }},POSTGRES_CLOUD_USER=${{ secrets.POSTGRES_CLOUD_USER }},POSTGRES_CLOUD_PASSWORD=${{ secrets.POSTGRES_CLOUD_PASSWORD }}"
+          service-env: "POSTGRES_CLOUD_URL=${{ secrets.POSTGRES_CLOUD_URL }},POSTGRES_CLOUD_USER=${{ secrets.POSTGRES_CLOUD_USER }},POSTGRES_CLOUD_PASSWORD=${{ secrets.POSTGRES_CLOUD_PASSWORD }},OPEN_AI_API_KEY=${{ secrets.OPEN_AI_API_KEY }}"
